@@ -41,6 +41,28 @@ export default function Home() {
   const { data: members, isLoading, error } = useFamilyMembers();
   const [selectedMember, setSelectedMember] = useState<FamilyMemberResponse | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
+  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  
+  const handleDrop = async (targetId: number) => {
+    if (draggedId && draggedId !== targetId) {
+      try {
+        const response = await fetch("/api/family/swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id1: draggedId, id2: targetId }),
+        });
+        if (response.ok) {
+          // Refetch members to update UI
+          window.location.reload();
+        }
+      } catch (error) {
+        console.error("Swap failed:", error);
+      }
+    }
+    setDraggedId(null);
+    setDragOverId(null);
+  };
 
   // Track which nodes have children in the original tree
   const nodeHasChildrenMap = useMemo(() => {
@@ -225,7 +247,7 @@ export default function Home() {
                       <div style={{ transform: 'translate(-50%, -50%)' }}>
                         <MemberCard
                           member={node.data}
-                          level={node.depth - 1} // -1 because depth includes virtual root
+                          level={node.depth - 1}
                           onClick={() => setSelectedMember(node.data)}
                           hasChildren={hasChildren}
                           isExpanded={isExpanded}
@@ -238,6 +260,23 @@ export default function Home() {
                             }
                             setExpandedNodes(newExpanded);
                           }}
+                          isDragging={draggedId === node.data.id}
+                          onDragStart={(id) => setDraggedId(id)}
+                          onDragEnter={(id) => setDragOverId(id)}
+                          dragOverId={dragOverId}
+                        />
+                        {dragOverId === node.data.id && draggedId && draggedId !== node.data.id && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 border-2 border-primary rounded-2xl pointer-events-none"
+                          />
+                        )}
+                        <div
+                          onDrop={() => handleDrop(node.data.id)}
+                          onDragLeave={() => setDragOverId(null)}
+                          onDragOver={(e) => e.preventDefault()}
+                          className="absolute inset-0 pointer-events-auto"
                         />
                       </div>
                     </motion.div>

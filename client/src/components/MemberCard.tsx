@@ -10,6 +10,10 @@ interface MemberCardProps {
   hasChildren?: boolean;
   isExpanded?: boolean;
   onToggleExpand?: () => void;
+  isDragging?: boolean;
+  onDragStart?: (memberId: number) => void;
+  onDragEnter?: (memberId: number) => void;
+  dragOverId?: number | null;
 }
 
 // Color palette for levels - looping
@@ -22,26 +26,34 @@ const LEVEL_COLORS = [
   "bg-cyan-100 border-cyan-200 text-cyan-900",         // Level 5
 ];
 
-export function MemberCard({ member, level, onClick, hasChildren, isExpanded, onToggleExpand }: MemberCardProps) {
+export function MemberCard({ member, level, onClick, hasChildren, isExpanded, onToggleExpand, isDragging, onDragStart, onDragEnter, dragOverId }: MemberCardProps) {
   const colorClass = member.isDeceased 
     ? "bg-slate-200 border-slate-300 text-slate-500 grayscale" 
     : LEVEL_COLORS[level % LEVEL_COLORS.length];
 
+  const isHovered = dragOverId === member.id;
+
   return (
     <div className="relative">
       <motion.div
-        whileHover={{ scale: 1.05, y: -5 }}
+        whileHover={!isDragging ? { scale: 1.05, y: -5 } : {}}
         whileTap={{ scale: 0.95 }}
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, type: "spring" }}
         onClick={onClick}
+        draggable
+        onDragStart={() => onDragStart?.(member.id)}
+        onDragEnter={() => onDragEnter?.(member.id)}
+        onDragOver={(e) => e.preventDefault()}
         className={cn(
           "relative flex flex-col items-center justify-center",
-          "w-48 p-4 rounded-2xl cursor-pointer",
+          "w-48 p-4 rounded-2xl cursor-grab active:cursor-grabbing",
           "border-2 shadow-lg hover:shadow-xl transition-all duration-300",
           "backdrop-blur-sm",
-          colorClass
+          colorClass,
+          isDragging && "opacity-50",
+          isHovered && !isDragging && "ring-2 ring-offset-2 ring-primary"
         )}
       >
         {level === 0 && !member.isDeceased && (

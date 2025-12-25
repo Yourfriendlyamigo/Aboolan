@@ -11,6 +11,7 @@ export const familyMembers = pgTable("family_members", {
   motherName: text("mother_name"), // Optional: mother's name
   phoneNumber: text("phone_number"),
   isDeceased: boolean("is_deceased").default(false).notNull(),
+  position: integer("position").default(0).notNull(), // For ordering siblings
   // For tree visualization, it helps to know generation/level, but we can compute it or store it.
   // We'll compute it on the frontend or backend recursion.
 });

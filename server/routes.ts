@@ -63,6 +63,22 @@ export async function registerRoutes(
     res.status(204).send();
   });
 
+  app.post(api.family.swap.path, async (req, res) => {
+    try {
+      const input = api.family.swap.input.parse(req.body);
+      const result = await storage.swapMembers(input.id1, input.id2);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join('.'),
+        });
+      }
+      res.status(400).json({ message: err instanceof Error ? err.message : "Swap failed" });
+    }
+  });
+
   // Seed the database
   await seedDatabase();
 

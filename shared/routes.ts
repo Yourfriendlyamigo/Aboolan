@@ -58,6 +58,21 @@ export const api = {
         404: errorSchemas.notFound,
       },
     },
+    swap: {
+      method: 'POST' as const,
+      path: '/api/family/swap',
+      input: z.object({
+        id1: z.number(),
+        id2: z.number(),
+      }),
+      responses: {
+        200: z.object({
+          member1: z.custom<typeof familyMembers.$inferSelect>(),
+          member2: z.custom<typeof familyMembers.$inferSelect>(),
+        }),
+        400: errorSchemas.validation,
+      },
+    },
   },
 };
 
