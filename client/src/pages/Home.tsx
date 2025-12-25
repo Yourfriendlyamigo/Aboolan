@@ -7,6 +7,7 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { hierarchy, tree } from "d3-hierarchy";
 import { useState, useMemo } from "react";
 import { Loader2, Trees } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Helper to build hierarchy for D3
 interface TreeNode extends FamilyMemberResponse {
@@ -40,6 +41,19 @@ export default function Home() {
   const { data: members, isLoading, error } = useFamilyMembers();
   const [selectedMember, setSelectedMember] = useState<FamilyMemberResponse | null>(null);
   const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
+
+  // Track which nodes have children in the original tree
+  const nodeHasChildrenMap = useMemo(() => {
+    const map = new Map<number, boolean>();
+    if (!members) return map;
+    
+    members.forEach(m => {
+      const hasChildren = members.some(other => other.parentId === m.id);
+      map.set(m.id, hasChildren);
+    });
+    
+    return map;
+  }, [members]);
 
   const treeLayout = useMemo(() => {
     if (!members || members.length === 0) return null;
@@ -168,52 +182,65 @@ export default function Home() {
               >
                 {/* SVG Layer for connecting lines */}
                 <svg className="absolute inset-0 pointer-events-none w-full h-full overflow-visible">
-                  {treeLayout?.links.map((link, i) => (
-                    <path
-                      key={i}
-                      d={`
-                        M${link.source.x},${link.source.y + 40}
-                        C${link.source.x},${(link.source.y + link.target.y) / 2}
-                         ${link.target.x},${(link.source.y + link.target.y) / 2}
-                         ${link.target.x},${link.target.y - 60}
-                      `}
-                      className="tree-line"
-                    />
-                  ))}
+                  {treeLayout?.links.map((link, i) => {
+                    const pathD = `
+                      M${link.source.x},${link.source.y + 40}
+                      C${link.source.x},${(link.source.y + link.target.y) / 2}
+                       ${link.target.x},${(link.source.y + link.target.y) / 2}
+                       ${link.target.x},${link.target.y - 60}
+                    `;
+                    return (
+                      <motion.path
+                        key={i}
+                        d={pathD}
+                        className="tree-line"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        exit={{ pathLength: 0, opacity: 0 }}
+                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                      />
+                    );
+                  })}
                 </svg>
 
                 {/* Nodes Layer */}
                 {treeLayout?.nodes.map((node) => {
-                  const hasChildren = node.data.children && node.data.children.length > 0;
+                  const hasChildren = nodeHasChildrenMap.get(node.data.id) || false;
                   const isExpanded = expandedNodes.has(node.data.id);
                   
                   return (
-                    <div
+                    <motion.div
                       key={node.data.id}
                       className="absolute"
                       style={{
                         left: node.x,
                         top: node.y,
-                        transform: 'translate(-50%, -50%)',
                       }}
+                      initial={{ opacity: 0, y: -20, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -20, scale: 0.8 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      layout
                     >
-                      <MemberCard
-                        member={node.data}
-                        level={node.depth - 1} // -1 because depth includes virtual root
-                        onClick={() => setSelectedMember(node.data)}
-                        hasChildren={hasChildren}
-                        isExpanded={isExpanded}
-                        onToggleExpand={() => {
-                          const newExpanded = new Set(expandedNodes);
-                          if (isExpanded) {
-                            newExpanded.delete(node.data.id);
-                          } else {
-                            newExpanded.add(node.data.id);
-                          }
-                          setExpandedNodes(newExpanded);
-                        }}
-                      />
-                    </div>
+                      <div style={{ transform: 'translate(-50%, -50%)' }}>
+                        <MemberCard
+                          member={node.data}
+                          level={node.depth - 1} // -1 because depth includes virtual root
+                          onClick={() => setSelectedMember(node.data)}
+                          hasChildren={hasChildren}
+                          isExpanded={isExpanded}
+                          onToggleExpand={() => {
+                            const newExpanded = new Set(expandedNodes);
+                            if (isExpanded) {
+                              newExpanded.delete(node.data.id);
+                            } else {
+                              newExpanded.add(node.data.id);
+                            }
+                            setExpandedNodes(newExpanded);
+                          }}
+                        />
+                      </div>
+                    </motion.div>
                   );
                 })}
               </div>
