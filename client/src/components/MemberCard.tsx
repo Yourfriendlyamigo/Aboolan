@@ -1,6 +1,6 @@
 import { FamilyMemberResponse } from "@shared/routes";
 import { cn } from "@/lib/utils";
-import { User, Phone, Crown, Cross, ChevronDown } from "lucide-react";
+import { User, Phone, Crown, Cross, ChevronDown, Heart } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MemberCardProps {
@@ -66,9 +66,16 @@ export function MemberCard({ member, level, onClick, hasChildren, isExpanded, on
         <h3 className="font-display font-bold text-center text-lg leading-tight line-clamp-2">
           {member.name}
         </h3>
+
+        {member.motherName && (
+          <div className="flex items-center gap-1 mt-2 text-xs opacity-75 font-medium">
+            <Heart size={10} />
+            <span className="line-clamp-1">{member.motherName}</span>
+          </div>
+        )}
         
         {member.phoneNumber && (
-          <div className="flex items-center gap-1 mt-2 text-xs opacity-75 font-medium">
+          <div className="flex items-center gap-1 mt-1 text-xs opacity-75 font-medium">
             <Phone size={10} />
             <span>{member.phoneNumber}</span>
           </div>
