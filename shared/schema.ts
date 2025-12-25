@@ -1,18 +1,41 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+
+import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const familyMembers = pgTable("family_members", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  parentId: integer("parent_id"), // Can be null for the root nodes (grandparents)
+  phoneNumber: text("phone_number"),
+  isDeceased: boolean("is_deceased").default(false).notNull(),
+  // For tree visualization, it helps to know generation/level, but we can compute it or store it.
+  // We'll compute it on the frontend or backend recursion.
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
+export const familyMembersRelations = relations(familyMembers, ({ one, many }) => ({
+  parent: one(familyMembers, {
+    fields: [familyMembers.parentId],
+    references: [familyMembers.id],
+    relationName: "parent_child",
+  }),
+  children: many(familyMembers, {
+    relationName: "parent_child",
+  }),
+}));
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const insertFamilyMemberSchema = createInsertSchema(familyMembers).omit({ id: true });
+
+export type FamilyMember = typeof familyMembers.$inferSelect;
+export type InsertFamilyMember = z.infer<typeof insertFamilyMemberSchema>;
+
+// API Types
+export type CreateMemberRequest = InsertFamilyMember;
+export type UpdateMemberRequest = Partial<InsertFamilyMember>;
+
+// A tree node structure for the frontend to consume easily
+export interface FamilyTreeNode extends FamilyMember {
+  children?: FamilyTreeNode[];
+  level?: number; // Helper for coloring
+}
