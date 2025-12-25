@@ -8,6 +8,7 @@ export const familyMembers = pgTable("family_members", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   parentId: integer("parent_id"), // Can be null for the root nodes (grandparents)
+  motherName: text("mother_name"), // Optional: mother's name
   phoneNumber: text("phone_number"),
   isDeceased: boolean("is_deceased").default(false).notNull(),
   // For tree visualization, it helps to know generation/level, but we can compute it or store it.

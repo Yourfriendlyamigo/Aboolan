@@ -31,6 +31,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
   const [mode, setMode] = useState<"view" | "edit" | "add_child">("view");
   const [formData, setFormData] = useState({
     name: "",
+    motherName: "",
     phoneNumber: "",
     isDeceased: false,
   });
@@ -42,6 +43,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
       if (member) {
         setFormData({
           name: member.name,
+          motherName: member.motherName || "",
           phoneNumber: member.phoneNumber || "",
           isDeceased: member.isDeceased,
         });
@@ -54,6 +56,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
     if (mode === "add_child") {
       setFormData({
         name: "",
+        motherName: "",
         phoneNumber: "",
         isDeceased: false,
       });
@@ -71,6 +74,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
         await updateMutation.mutateAsync({
           id: member.id,
           name: formData.name,
+          motherName: formData.motherName || null,
           phoneNumber: formData.phoneNumber || null,
           isDeceased: formData.isDeceased,
         });
@@ -79,6 +83,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
         await createMutation.mutateAsync({
           name: formData.name,
           parentId: member.id,
+          motherName: formData.motherName || null,
           phoneNumber: formData.phoneNumber || null,
           isDeceased: formData.isDeceased,
         });
@@ -130,6 +135,15 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
         {mode === "view" ? (
           <div className="space-y-6">
             <div className="space-y-4">
+              {member.motherName && (
+                <div className="flex items-center gap-3 text-muted-foreground bg-muted/50 p-4 rounded-xl">
+                  <Heart className="w-5 h-5 text-rose-500" />
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground uppercase font-semibold">Mother</span>
+                    <span className="font-medium text-foreground">{member.motherName}</span>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center gap-3 text-muted-foreground bg-muted/50 p-4 rounded-xl">
                 <Phone className="w-5 h-5 text-primary" />
                 <span className="font-medium text-foreground">{member.phoneNumber || "No phone number listed"}</span>
@@ -176,6 +190,17 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
                 placeholder="e.g. Jane Doe"
                 className="rounded-xl border-border bg-background focus:ring-primary/20"
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mother">Mother's Name (Optional)</Label>
+              <Input
+                id="mother"
+                value={formData.motherName}
+                onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
+                placeholder="e.g. Sarah Smith"
+                className="rounded-xl border-border bg-background focus:ring-primary/20"
               />
             </div>
             

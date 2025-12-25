@@ -21,6 +21,7 @@ export function CreateRootDialog() {
   const createMutation = useCreateFamilyMember();
   const [formData, setFormData] = useState({
     name: "",
+    motherName: "",
     phoneNumber: "",
     isDeceased: false,
   });
@@ -31,12 +32,13 @@ export function CreateRootDialog() {
       await createMutation.mutateAsync({
         name: formData.name,
         parentId: null, // Root node
+        motherName: formData.motherName || null,
         phoneNumber: formData.phoneNumber || null,
         isDeceased: formData.isDeceased,
       });
       toast({ title: "Family Started!", description: `Added ${formData.name} as a root ancestor.` });
       setOpen(false);
-      setFormData({ name: "", phoneNumber: "", isDeceased: false });
+      setFormData({ name: "", motherName: "", phoneNumber: "", isDeceased: false });
     } catch (error) {
       toast({ 
         variant: "destructive",
@@ -68,6 +70,17 @@ export function CreateRootDialog() {
               placeholder="e.g. Great Grandpa Joe"
               className="rounded-xl"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="root-mother">Mother's Name (Optional)</Label>
+            <Input
+              id="root-mother"
+              value={formData.motherName}
+              onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
+              placeholder="e.g. Mary Johnson"
+              className="rounded-xl"
             />
           </div>
           
