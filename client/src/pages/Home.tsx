@@ -39,12 +39,32 @@ function buildTreeData(members: FamilyMemberResponse[]): TreeNode[] {
 export default function Home() {
   const { data: members, isLoading, error } = useFamilyMembers();
   const [selectedMember, setSelectedMember] = useState<FamilyMemberResponse | null>(null);
+  const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
 
   const treeLayout = useMemo(() => {
     if (!members || members.length === 0) return null;
 
     const rootNodes = buildTreeData(members);
     if (rootNodes.length === 0) return null;
+
+    // Filter tree: only show expanded branches
+    function filterTree(node: TreeNode): TreeNode | null {
+      if (node.id === -1) {
+        // Virtual root - always show
+        return {
+          ...node,
+          children: node.children?.map(child => filterTree(child)).filter((c): c is TreeNode => c !== null) || []
+        };
+      }
+      
+      const isExpanded = expandedNodes.has(node.id);
+      return {
+        ...node,
+        children: isExpanded 
+          ? (node.children?.map(child => filterTree(child)).filter((c): c is TreeNode => c !== null) || [])
+          : []
+      };
+    }
 
     // Create a virtual root to hold all actual roots if there are multiple family trees
     const virtualRoot = {
@@ -56,9 +76,10 @@ export default function Home() {
       children: rootNodes
     };
 
-    const d3Hierarchy = hierarchy(virtualRoot);
+    const filteredRoot = filterTree(virtualRoot) as TreeNode;
+    const d3Hierarchy = hierarchy(filteredRoot);
     
-    // Calculate layout size based on number of leaves to prevent crowding
+    // Calculate layout size based on number of visible leaves
     const leafCount = d3Hierarchy.leaves().length;
     const width = Math.max(window.innerWidth, leafCount * 220);
     const height = Math.max(window.innerHeight - 100, d3Hierarchy.height * 250);
@@ -71,7 +92,7 @@ export default function Home() {
     const links = root.links().filter(l => l.source.data.id !== -1);
 
     return { nodes, links, width, height };
-  }, [members]);
+  }, [members, expandedNodes]);
 
   if (isLoading) {
     return (
@@ -102,7 +123,7 @@ export default function Home() {
         <div className="pointer-events-auto bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border border-border/50">
           <h1 className="text-2xl font-display font-bold text-primary flex items-center gap-2">
             <Trees className="w-6 h-6" />
-            Our Family Tree
+            Aboolan Family Tree
           </h1>
         </div>
         
@@ -162,23 +183,39 @@ export default function Home() {
                 </svg>
 
                 {/* Nodes Layer */}
-                {treeLayout?.nodes.map((node) => (
-                  <div
-                    key={node.data.id}
-                    className="absolute"
-                    style={{
-                      left: node.x,
-                      top: node.y,
-                      transform: 'translate(-50%, -50%)',
-                    }}
-                  >
-                    <MemberCard
-                      member={node.data}
-                      level={node.depth - 1} // -1 because depth includes virtual root
-                      onClick={() => setSelectedMember(node.data)}
-                    />
-                  </div>
-                ))}
+                {treeLayout?.nodes.map((node) => {
+                  const hasChildren = node.data.children && node.data.children.length > 0;
+                  const isExpanded = expandedNodes.has(node.data.id);
+                  
+                  return (
+                    <div
+                      key={node.data.id}
+                      className="absolute"
+                      style={{
+                        left: node.x,
+                        top: node.y,
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    >
+                      <MemberCard
+                        member={node.data}
+                        level={node.depth - 1} // -1 because depth includes virtual root
+                        onClick={() => setSelectedMember(node.data)}
+                        hasChildren={hasChildren}
+                        isExpanded={isExpanded}
+                        onToggleExpand={() => {
+                          const newExpanded = new Set(expandedNodes);
+                          if (isExpanded) {
+                            newExpanded.delete(node.data.id);
+                          } else {
+                            newExpanded.add(node.data.id);
+                          }
+                          setExpandedNodes(newExpanded);
+                        }}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             </TransformComponent>
           </TransformWrapper>
