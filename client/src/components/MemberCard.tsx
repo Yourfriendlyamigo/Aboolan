@@ -77,24 +77,25 @@ export function MemberCard({ member, level, onClick, hasChildren, isExpanded, on
 
       {/* Expand/Collapse Arrow */}
       {hasChildren && onToggleExpand && (
-        <motion.button
-          animate={{ rotate: isExpanded ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleExpand();
-          }}
-          className={cn(
-            "absolute -bottom-6 left-1/2 -translate-x-1/2",
-            "bg-primary text-white p-2 rounded-full shadow-lg",
-            "hover:scale-110 transition-transform cursor-pointer",
-            "border border-primary/20"
-          )}
-          title={isExpanded ? "Collapse" : "Expand"}
-          data-testid={`button-expand-${member.id}`}
-        >
-          <ChevronDown size={18} />
-        </motion.button>
+        <div className="absolute -bottom-6 left-0 right-0 flex justify-center">
+          <motion.button
+            animate={{ rotate: isExpanded ? 180 : 0 }}
+            transition={{ duration: 0.3 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand();
+            }}
+            className={cn(
+              "bg-primary text-white p-2 rounded-full shadow-lg",
+              "hover:scale-110 transition-transform cursor-pointer",
+              "border border-primary/20"
+            )}
+            title={isExpanded ? "Collapse" : "Expand"}
+            data-testid={`button-expand-${member.id}`}
+          >
+            <ChevronDown size={18} />
+          </motion.button>
+        </div>
       )}
     </div>
   );
