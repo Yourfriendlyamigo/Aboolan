@@ -96,3 +96,45 @@ export function useDeleteFamilyMember() {
     },
   });
 }
+
+// Swap members (reorder siblings)
+export function useSwapFamilyMembers() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id1, id2 }: { id1: number; id2: number }) => {
+      const res = await fetch(api.family.swap.path, {
+        method: api.family.swap.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id1, id2 }),
+      });
+      if (!res.ok) throw new Error("Failed to swap members");
+      return api.family.swap.responses[200].parse(await res.json());
+    },
+    onMutate: async ({ id1, id2 }) => {
+      await queryClient.cancelQueries({ queryKey: [api.family.list.path] });
+      const previous = queryClient.getQueryData<FamilyMemberResponse[]>([
+        api.family.list.path,
+      ]);
+      if (previous) {
+        const next = previous.map((member) => ({ ...member }));
+        const index1 = next.findIndex((m) => m.id === id1);
+        const index2 = next.findIndex((m) => m.id === id2);
+        if (index1 !== -1 && index2 !== -1) {
+          const temp = next[index1].position;
+          next[index1].position = next[index2].position;
+          next[index2].position = temp;
+        }
+        queryClient.setQueryData([api.family.list.path], next);
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData([api.family.list.path], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.family.list.path] });
+    },
+  });
+}

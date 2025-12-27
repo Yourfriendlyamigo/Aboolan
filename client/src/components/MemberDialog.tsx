@@ -28,7 +28,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
   const updateMutation = useUpdateFamilyMember();
   const deleteMutation = useDeleteFamilyMember();
 
-  const [mode, setMode] = useState<"view" | "edit" | "add_child">("view");
+  const [mode, setMode] = useState<"view" | "edit" | "add_child" | "add_parent">("view");
   const [formData, setFormData] = useState({
     name: "",
     motherName: "",
@@ -51,9 +51,9 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
     }
   }, [isOpen, member]);
 
-  // Handle transitions to Add Child mode
+  // Handle transitions to Add Child/Parent mode
   useEffect(() => {
-    if (mode === "add_child") {
+    if (mode === "add_child" || mode === "add_parent") {
       setFormData({
         name: "",
         motherName: "",
@@ -88,6 +88,19 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
           isDeceased: formData.isDeceased,
         });
         toast({ title: "Child added", description: `Added ${formData.name} to the family.` });
+      } else if (mode === "add_parent" && member) {
+        const parent = await createMutation.mutateAsync({
+          name: formData.name,
+          parentId: null,
+          motherName: formData.motherName || null,
+          phoneNumber: formData.phoneNumber || null,
+          isDeceased: formData.isDeceased,
+        });
+        await updateMutation.mutateAsync({
+          id: member.id,
+          parentId: parent.id,
+        });
+        toast({ title: "Parent added", description: `Added ${formData.name} as ${member.name}'s parent.` });
       }
       onClose();
     } catch (error) {
@@ -117,7 +130,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
       <DialogContent className="sm:max-w-md rounded-2xl overflow-hidden border-none shadow-2xl bg-white/95 backdrop-blur-xl">
         <DialogHeader className="bg-gradient-to-r from-primary/10 to-transparent p-6 -mx-6 -mt-6 mb-4 border-b border-primary/10">
           <DialogTitle className="font-display text-2xl text-primary flex items-center gap-2">
-            {mode === "add_child" ? "Add New Family Member" : member.name}
+            {mode === "add_child" ? "Add New Family Member" : mode === "add_parent" ? "Add Parent" : member.name}
             {member.isDeceased && mode === "view" && <span className="text-xs font-sans font-normal bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">Deceased</span>}
           </DialogTitle>
           {mode === "view" && parent && (
@@ -130,6 +143,11 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
               Adding child to <span className="font-semibold text-foreground">{member.name}</span>
             </p>
           )}
+          {mode === "add_parent" && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Adding parent to <span className="font-semibold text-foreground">{member.name}</span>
+            </p>
+          )}
         </DialogHeader>
 
         {mode === "view" ? (
@@ -139,7 +157,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
                 <div className="flex items-center gap-3 text-muted-foreground bg-muted/50 p-4 rounded-xl">
                   <Heart className="w-5 h-5 text-rose-500" />
                   <div className="flex flex-col">
-                    <span className="text-xs text-muted-foreground uppercase font-semibold">Mother</span>
+                    <span className="text-xs text-muted-foreground uppercase font-semibold">Mother/Father</span>
                     <span className="font-medium text-foreground">{member.motherName}</span>
                   </div>
                 </div>
@@ -166,6 +184,16 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
                 <UserPlus className="w-5 h-5" />
                 <span>Add Child</span>
               </Button>
+              {!member.parentId && (
+                <Button 
+                  variant="outline"
+                  className="col-span-2 h-auto py-4 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary/20 hover:text-primary transition-all"
+                  onClick={() => setMode("add_parent")}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span>Add Parent</span>
+                </Button>
+              )}
             </div>
             
             <div className="border-t border-border pt-4">
@@ -194,12 +222,12 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="mother">Mother's Name (Optional)</Label>
+              <Label htmlFor="mother">Mother/Father Name (Optional)</Label>
               <Input
                 id="mother"
                 value={formData.motherName}
                 onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
-                placeholder="e.g. Sarah Smith"
+                placeholder="e.g. Sarah or John Smith"
                 className="rounded-xl border-border bg-background focus:ring-primary/20"
               />
             </div>

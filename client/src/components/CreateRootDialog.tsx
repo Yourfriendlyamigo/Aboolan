@@ -74,12 +74,12 @@ export function CreateRootDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="root-mother">Mother's Name (Optional)</Label>
+            <Label htmlFor="root-mother">Mother/Father Name (Optional)</Label>
             <Input
               id="root-mother"
               value={formData.motherName}
               onChange={(e) => setFormData({ ...formData, motherName: e.target.value })}
-              placeholder="e.g. Mary Johnson"
+              placeholder="e.g. Mary or John Johnson"
               className="rounded-xl"
             />
           </div>

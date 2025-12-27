@@ -1,6 +1,6 @@
 import { FamilyMemberResponse } from "@shared/routes";
 import { cn } from "@/lib/utils";
-import { User, Phone, Crown, Cross, ChevronDown, Heart } from "lucide-react";
+import { User, Phone, Crown, Cross, ChevronDown, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface MemberCardProps {
@@ -13,7 +13,12 @@ interface MemberCardProps {
   isDragging?: boolean;
   onDragStart?: (memberId: number) => void;
   onDragEnter?: (memberId: number) => void;
+  onDragEnd?: () => void;
   dragOverId?: number | null;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
+  onMoveLeft?: () => void;
+  onMoveRight?: () => void;
 }
 
 // Color palette for levels - looping
@@ -26,7 +31,23 @@ const LEVEL_COLORS = [
   "bg-cyan-100 border-cyan-200 text-cyan-900",         // Level 5
 ];
 
-export function MemberCard({ member, level, onClick, hasChildren, isExpanded, onToggleExpand, isDragging, onDragStart, onDragEnter, dragOverId }: MemberCardProps) {
+export function MemberCard({
+  member,
+  level,
+  onClick,
+  hasChildren,
+  isExpanded,
+  onToggleExpand,
+  isDragging,
+  onDragStart,
+  onDragEnter,
+  onDragEnd,
+  dragOverId,
+  canMoveLeft,
+  canMoveRight,
+  onMoveLeft,
+  onMoveRight,
+}: MemberCardProps) {
   const colorClass = member.isDeceased 
     ? "bg-slate-200 border-slate-300 text-slate-500 grayscale" 
     : LEVEL_COLORS[level % LEVEL_COLORS.length];
@@ -43,9 +64,14 @@ export function MemberCard({ member, level, onClick, hasChildren, isExpanded, on
         transition={{ duration: 0.3, type: "spring" }}
         onClick={onClick}
         draggable
-        onDragStart={() => onDragStart?.(member.id)}
+        onDragStart={(event) => {
+          event.dataTransfer.setData("text/plain", String(member.id));
+          event.dataTransfer.effectAllowed = "move";
+          onDragStart?.(member.id);
+        }}
         onDragEnter={() => onDragEnter?.(member.id)}
         onDragOver={(e) => e.preventDefault()}
+        onDragEnd={onDragEnd}
         className={cn(
           "relative flex flex-col items-center justify-center",
           "w-48 p-4 rounded-2xl cursor-grab active:cursor-grabbing",
@@ -94,9 +120,47 @@ export function MemberCard({ member, level, onClick, hasChildren, isExpanded, on
         )}
       </motion.div>
 
+      {(canMoveLeft || canMoveRight) && (
+        <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-2">
+          {canMoveLeft && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onMoveLeft?.();
+              }}
+              className="bg-white/90 text-slate-700 p-1.5 rounded-full shadow-md border border-border hover:bg-white transition-colors"
+              title="Move left"
+              aria-label="Move left"
+            >
+              <ChevronLeft size={16} />
+            </button>
+          )}
+          {canMoveRight && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onMoveRight?.();
+              }}
+              className="bg-white/90 text-slate-700 p-1.5 rounded-full shadow-md border border-border hover:bg-white transition-colors"
+              title="Move right"
+              aria-label="Move right"
+            >
+              <ChevronRight size={16} />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Expand/Collapse Arrow */}
       {hasChildren && onToggleExpand && (
-        <div className="absolute -bottom-6 left-0 right-0 flex justify-center">
+        <div
+          className={cn(
+            "absolute left-0 right-0 flex justify-center",
+            canMoveLeft || canMoveRight ? "-bottom-12" : "-bottom-6",
+          )}
+        >
           <motion.button
             animate={{ rotate: isExpanded ? 180 : 0 }}
             transition={{ duration: 0.3 }}

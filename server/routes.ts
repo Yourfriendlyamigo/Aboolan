@@ -79,42 +79,5 @@ export async function registerRoutes(
     }
   });
 
-  // Seed the database
-  await seedDatabase();
-
   return httpServer;
-}
-
-// Seed function to create initial grandparents if empty
-async function seedDatabase() {
-  const existing = await storage.getFamilyMembers();
-  if (existing.length === 0) {
-    // Create Grandparents
-    const grandpa = await storage.createFamilyMember({
-      name: "Grandpa John",
-      phoneNumber: "555-0100",
-      isDeceased: false,
-    });
-    
-    const grandma = await storage.createFamilyMember({
-      name: "Grandma Mary",
-      phoneNumber: "555-0101",
-      isDeceased: false,
-    });
-
-    // Create Children
-    await storage.createFamilyMember({
-      name: "Uncle Bob",
-      parentId: grandpa.id,
-      phoneNumber: "555-0102",
-      isDeceased: false,
-    });
-
-    await storage.createFamilyMember({
-      name: "Aunt Alice",
-      parentId: grandma.id,
-      phoneNumber: "555-0103",
-      isDeceased: true, // Example deceased
-    });
-  }
 }

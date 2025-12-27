@@ -5,9 +5,10 @@ import { MemberDialog } from "@/components/MemberDialog";
 import { CreateRootDialog } from "@/components/CreateRootDialog";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { hierarchy, tree } from "d3-hierarchy";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Loader2, Trees } from "lucide-react";
 import { motion } from "framer-motion";
+import type { ReactZoomPanPinchContentRef } from "react-zoom-pan-pinch";
 
 // Helper to build hierarchy for D3
 interface TreeNode extends FamilyMemberResponse {
@@ -43,6 +44,29 @@ export default function Home() {
   const [expandedNodes, setExpandedNodes] = useState<Set<number>>(new Set());
   const [draggedId, setDraggedId] = useState<number | null>(null);
   const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const [lastCollapsedId, setLastCollapsedId] = useState<number | null>(null);
+  const transformRef = useRef<ReactZoomPanPinchContentRef | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("familyTreeExpanded");
+      if (!raw) return;
+      const ids = JSON.parse(raw) as number[];
+      if (Array.isArray(ids)) {
+        setExpandedNodes(new Set(ids));
+      }
+    } catch {
+      // Ignore persisted state if it can't be parsed.
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("familyTreeExpanded", JSON.stringify([...expandedNodes]));
+    } catch {
+      // Ignore write failures (e.g., privacy mode).
+    }
+  }, [expandedNodes]);
   
   const handleDrop = async (targetId: number) => {
     if (draggedId && draggedId !== targetId) {
@@ -52,14 +76,19 @@ export default function Home() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id1: draggedId, id2: targetId }),
         });
-        if (response.ok) {
-          // Refetch members to update UI
-          window.location.reload();
+        if (!response.ok) {
+          throw new Error("Swap failed");
         }
       } catch (error) {
         console.error("Swap failed:", error);
       }
     }
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+
+
+  const handleDragEnd = () => {
     setDraggedId(null);
     setDragOverId(null);
   };
@@ -76,6 +105,7 @@ export default function Home() {
     
     return map;
   }, [members]);
+
 
   const treeLayout = useMemo(() => {
     if (!members || members.length === 0) return null;
@@ -130,6 +160,22 @@ export default function Home() {
     return { nodes, links, width, height };
   }, [members, expandedNodes]);
 
+  useEffect(() => {
+    if (!treeLayout || lastCollapsedId === null) return;
+    const targetNode = treeLayout.nodes.find((node) => node.data.id === lastCollapsedId);
+    const ref = transformRef.current;
+    if (!targetNode || !ref?.instance?.wrapperComponent) return;
+
+    const wrapper = ref.instance.wrapperComponent;
+    const { width, height } = wrapper.getBoundingClientRect();
+    const scale = ref.instance.transformState.scale;
+    const positionX = width / 2 - targetNode.x * scale;
+    const positionY = height / 2 - targetNode.y * scale;
+
+    ref.setTransform(positionX, positionY, scale, 450, "easeOut");
+    setLastCollapsedId(null);
+  }, [treeLayout, lastCollapsedId]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-4">
@@ -155,16 +201,27 @@ export default function Home() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-background flex flex-col">
       {/* Header */}
-      <header className="absolute top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between pointer-events-none">
+      <header className="absolute top-0 left-0 right-0 z-50 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center sm:justify-between gap-4 sm:gap-0 pointer-events-none relative">
         <div className="pointer-events-auto bg-white/80 backdrop-blur-md px-6 py-3 rounded-full shadow-sm border border-border/50">
-          <h1 className="text-2xl font-display font-bold text-primary flex items-center gap-2">
+          <h1 className="text-3xl sm:text-2xl font-display font-bold text-primary flex items-center gap-2">
             <Trees className="w-6 h-6" />
             Aboolan Family Tree
           </h1>
         </div>
-        
-        <div className="pointer-events-auto">
-          <CreateRootDialog />
+
+        <div className="pointer-events-auto hidden sm:block bg-white/80 backdrop-blur-md px-5 py-2 rounded-full shadow-sm border border-border/50 text-sm font-semibold text-foreground sm:absolute sm:left-1/2 sm:-translate-x-1/2">
+          {members?.length ?? 0} member{(members?.length ?? 0) === 1 ? "" : "s"}
+        </div>
+
+        <div className="pointer-events-auto w-full sm:w-auto">
+          <div className="grid grid-cols-2 gap-3 sm:block">
+            <div className="bg-white/80 backdrop-blur-md px-5 py-2 rounded-full shadow-sm border border-border/50 text-sm font-semibold text-foreground text-center sm:hidden">
+              {members?.length ?? 0} member{(members?.length ?? 0) === 1 ? "" : "s"}
+            </div>
+            <div className="flex justify-center sm:justify-end">
+              <CreateRootDialog />
+            </div>
+          </div>
         </div>
       </header>
 
@@ -191,6 +248,9 @@ export default function Home() {
             centerOnInit
             limitToBounds={false}
           >
+            {(transformApi) => {
+              transformRef.current = transformApi;
+              return (
             <TransformComponent wrapperClass="!w-full !h-full" contentClass="!w-full !h-full">
               <div 
                 style={{ 
@@ -219,7 +279,7 @@ export default function Home() {
                         initial={{ pathLength: 0, opacity: 0 }}
                         animate={{ pathLength: 1, opacity: 1 }}
                         exit={{ pathLength: 0, opacity: 0 }}
-                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                        transition={{ duration: 1.1, ease: "easeInOut" }}
                       />
                     );
                   })}
@@ -241,7 +301,7 @@ export default function Home() {
                       initial={{ opacity: 0, y: -20, scale: 0.8 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -20, scale: 0.8 }}
-                      transition={{ duration: 0.4, ease: "easeOut" }}
+                      transition={{ duration: 0.9, ease: "easeOut" }}
                       layout
                     >
                       <div style={{ transform: 'translate(-50%, -50%)' }}>
@@ -255,14 +315,17 @@ export default function Home() {
                             const newExpanded = new Set(expandedNodes);
                             if (isExpanded) {
                               newExpanded.delete(node.data.id);
+                              setLastCollapsedId(node.data.id);
                             } else {
                               newExpanded.add(node.data.id);
+                              setLastCollapsedId(null);
                             }
                             setExpandedNodes(newExpanded);
                           }}
                           isDragging={draggedId === node.data.id}
                           onDragStart={(id) => setDraggedId(id)}
                           onDragEnter={(id) => setDragOverId(id)}
+                          onDragEnd={handleDragEnd}
                           dragOverId={dragOverId}
                         />
                         {dragOverId === node.data.id && draggedId && draggedId !== node.data.id && (
@@ -272,18 +335,22 @@ export default function Home() {
                             className="absolute inset-0 border-2 border-primary rounded-2xl pointer-events-none"
                           />
                         )}
-                        <div
-                          onDrop={() => handleDrop(node.data.id)}
-                          onDragLeave={() => setDragOverId(null)}
-                          onDragOver={(e) => e.preventDefault()}
-                          className="absolute inset-0 pointer-events-auto"
-                        />
+                        {draggedId !== null && (
+                          <div
+                            onDrop={() => handleDrop(node.data.id)}
+                            onDragLeave={() => setDragOverId(null)}
+                            onDragOver={(e) => e.preventDefault()}
+                            className="absolute inset-0 pointer-events-auto"
+                          />
+                        )}
                       </div>
                     </motion.div>
                   );
                 })}
               </div>
             </TransformComponent>
+              );
+            }}
           </TransformWrapper>
         )}
       </main>
