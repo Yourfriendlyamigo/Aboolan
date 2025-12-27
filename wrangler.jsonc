@@ -1,9 +1,0 @@
-{
-  "name": "aboolan",
-  "compatibility_date": "2025-12-27",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "dist/index.cjs",
-  "assets": {
-    "directory": "./dist/public"
-  }
-}
