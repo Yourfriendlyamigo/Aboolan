@@ -24,6 +24,7 @@ export function CreateRootDialog() {
     motherName: "",
     phoneNumber: "",
     isDeceased: false,
+    position: 0,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,10 +36,11 @@ export function CreateRootDialog() {
         motherName: formData.motherName || null,
         phoneNumber: formData.phoneNumber || null,
         isDeceased: formData.isDeceased,
+        position: formData.position,
       });
       toast({ title: "Family Started!", description: `Added ${formData.name} as a root ancestor.` });
       setOpen(false);
-      setFormData({ name: "", motherName: "", phoneNumber: "", isDeceased: false });
+      setFormData({ name: "", motherName: "", phoneNumber: "", isDeceased: false, position: 0 });
     } catch (error) {
       toast({ 
         variant: "destructive",
@@ -91,6 +93,23 @@ export function CreateRootDialog() {
               value={formData.phoneNumber}
               onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
               placeholder="e.g. +1 (555) 000-0000"
+              className="rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="root-position">Sibling Order (Position)</Label>
+            <Input
+              id="root-position"
+              type="number"
+              min={0}
+              value={formData.position}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  position: Number.isNaN(Number(e.target.value)) ? 0 : Number(e.target.value),
+                })
+              }
               className="rounded-xl"
             />
           </div>

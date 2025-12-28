@@ -24,6 +24,12 @@ function buildTreeData(members: FamilyMemberResponse[]): TreeNode[] {
   });
   
   const roots: TreeNode[] = [];
+  const compareByPosition = (a: TreeNode, b: TreeNode) => {
+    const posA = a.position ?? 0;
+    const posB = b.position ?? 0;
+    if (posA !== posB) return posA - posB;
+    return a.name.localeCompare(b.name);
+  };
   
   // Second pass: link children to parents
   members.forEach(m => {
@@ -34,6 +40,16 @@ function buildTreeData(members: FamilyMemberResponse[]): TreeNode[] {
       roots.push(node); // It's a root
     }
   });
+
+  dataMap.forEach((node) => {
+    if (node.children && node.children.length > 1) {
+      node.children.sort(compareByPosition);
+    }
+  });
+
+  if (roots.length > 1) {
+    roots.sort(compareByPosition);
+  }
   
   return roots;
 }
@@ -137,8 +153,10 @@ export default function Home() {
       id: -1,
       name: "Virtual Root",
       parentId: null,
+      motherName: null,
       phoneNumber: null,
       isDeceased: false,
+      position: 0,
       children: rootNodes
     };
 

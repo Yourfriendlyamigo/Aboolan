@@ -34,6 +34,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
     motherName: "",
     phoneNumber: "",
     isDeceased: false,
+    position: 0,
   });
 
   // Reset state when dialog opens or member changes
@@ -46,6 +47,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
           motherName: member.motherName || "",
           phoneNumber: member.phoneNumber || "",
           isDeceased: member.isDeceased,
+          position: member.position ?? 0,
         });
       }
     }
@@ -59,6 +61,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
         motherName: "",
         phoneNumber: "",
         isDeceased: false,
+        position: 0,
       });
     }
   }, [mode]);
@@ -77,6 +80,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
           motherName: formData.motherName || null,
           phoneNumber: formData.phoneNumber || null,
           isDeceased: formData.isDeceased,
+          position: formData.position,
         });
         toast({ title: "Updated successfully", description: `${formData.name} has been updated.` });
       } else if (mode === "add_child" && member) {
@@ -86,6 +90,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
           motherName: formData.motherName || null,
           phoneNumber: formData.phoneNumber || null,
           isDeceased: formData.isDeceased,
+          position: formData.position,
         });
         toast({ title: "Child added", description: `Added ${formData.name} to the family.` });
       } else if (mode === "add_parent" && member) {
@@ -95,6 +100,7 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
           motherName: formData.motherName || null,
           phoneNumber: formData.phoneNumber || null,
           isDeceased: formData.isDeceased,
+          position: formData.position,
         });
         await updateMutation.mutateAsync({
           id: member.id,
@@ -239,6 +245,23 @@ export function MemberDialog({ member, isOpen, onClose, allMembers }: MemberDial
                 value={formData.phoneNumber}
                 onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                 placeholder="e.g. +1 (555) 000-0000"
+                className="rounded-xl border-border bg-background focus:ring-primary/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="position">Sibling Order (Position)</Label>
+              <Input
+                id="position"
+                type="number"
+                min={0}
+                value={formData.position}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    position: Number.isNaN(Number(e.target.value)) ? 0 : Number(e.target.value),
+                  })
+                }
                 className="rounded-xl border-border bg-background focus:ring-primary/20"
               />
             </div>
