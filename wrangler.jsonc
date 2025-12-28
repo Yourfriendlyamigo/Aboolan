@@ -1,7 +1,7 @@
 {
   "name": "aboolan",
   "compatibility_date": "2025-12-28",
-  "main": "worker/serve-assets.ts",
+  "main": "worker/index.ts",
   "assets": {
     "directory": "./dist/public"
   }
